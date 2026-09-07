@@ -46,6 +46,7 @@ export default function Home() {
   const [isError, setIsError] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [imageFailed, setImageFailed] = useState(false);
+  const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
 
   function updateField(field: keyof LeadForm, value: string) {
     setForm((current) => ({
@@ -85,6 +86,7 @@ export default function Home() {
           name: form.name.trim(),
           email: form.email.trim(),
           interest: form.interest.trim(),
+          submissionId,
         }),
       });
 
@@ -135,6 +137,7 @@ export default function Home() {
       }
 
       setForm(initialForm);
+      setSubmissionId(crypto.randomUUID());
       setFieldErrors({});
       setIsError(false);
 

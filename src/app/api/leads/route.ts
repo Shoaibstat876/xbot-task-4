@@ -44,6 +44,7 @@ const leadSchema = z.object({
       })
   ),
 
+  submissionId: z.string().uuid("Invalid submission ID."),
   interest: z.preprocess(
     (value) => (value === undefined || value === null ? "" : value),
     z
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { name, email, interest } = parsed.data;
+    const { name, email, interest, submissionId } = parsed.data;
 
     const { data, error } = await supabaseServer
       .from("leads")
@@ -178,11 +179,30 @@ export async function POST(request: Request) {
         name,
         email,
         interest,
+        submission_id: submissionId,
         response_status: "pending",
       })
       .select("lead_id, response_status, created_at")
       .single();
 
+      if (error?.code === "23505") {
+  const { data: existingLead } = await supabaseServer
+    .from("leads")
+    .select("lead_id, response_status")
+    .eq("submission_id", submissionId)
+    .maybeSingle();
+
+  return NextResponse.json(
+    {
+      success: true,
+      leadId: existingLead?.lead_id,
+      status: existingLead?.response_status,
+      duplicate: true,
+      message: "Your enquiry has already been received.",
+    },
+    { status: 200 }
+  );
+}
     if (error || !data) {
       console.error("DATABASE_INSERT_FAILED", {
         code: error?.code,
