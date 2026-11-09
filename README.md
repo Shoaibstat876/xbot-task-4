@@ -1,6 +1,6 @@
 # XBOT EV — Automated Lead Response System
 
-**Production-deployed full-stack lead capture and email automation system**
+**Full-stack lead capture and email automation system with a Vercel-deployed web application and tested n8n workflow integration**
 
 **Live Application:** https://xbot-task-4.vercel.app  
 **Source Repository:** https://github.com/Shoaibstat876/xbot-task-4  
@@ -8,7 +8,7 @@
 **Application:** XBOT EV Lead Response Automation  
 **Frontend / Backend:** Next.js 16 + React + TypeScript  
 **Database:** Supabase PostgreSQL  
-**Automation:** n8n Cloud  
+**Automation:** n8n (originally n8n Cloud; subsequently restored and tested using local Docker)
 **Email Provider:** Resend  
 **Deployment:** Vercel  
 
@@ -97,7 +97,7 @@ This implementation satisfies the requirement through the following production a
 | Stated interest | `interest` textarea |
 | Server validation | Zod |
 | Persistent storage | Supabase PostgreSQL |
-| Automation | Published n8n Cloud workflow |
+| Automation | n8n Cloud (original implementation); local Docker n8n (latest verified integration) |
 | Automated response | Resend transactional email |
 | Name personalization | Deterministic template |
 | Interest personalization | Deterministic template |
@@ -125,7 +125,7 @@ The technology stack is deliberately focused.
 | Styling | Tailwind CSS | Responsive application styling |
 | Validation | Zod | Authoritative server-side request validation |
 | Database | Supabase PostgreSQL | Durable lead and lifecycle persistence |
-| Automation | n8n Cloud | Visible and inspectable workflow orchestration |
+| Automation | n8n (originally Cloud; currently tested using local Docker) | Visible and inspectable workflow orchestration |
 | Email | Resend | Transactional email transport |
 | Hosting | Vercel | Production deployment and environment configuration |
 | Source Control | Git | Version history |
@@ -662,7 +662,7 @@ with the expected value coming from:
 N8N_WEBHOOK_SECRET
 ```
 
-The deployed application uses the **production n8n webhook**, not the temporary test listener.
+The application supports a production n8n webhook, but current Vercel-to-n8n connectivity has not been reverified after the local Docker migration.
 
 The current production webhook path is based on:
 
@@ -1512,6 +1512,72 @@ This demonstrated that credential hardening did not break the production automat
 
 Actual received email was also observed during testing.
 
+### Latest Local Docker End-to-End Verification — November 9, 2026
+
+Following the original n8n Cloud implementation, the XBOT EV workflow was restored and tested using a local Docker-based n8n instance.
+
+The complete local integration was verified through the following chain:
+
+```text
+Next.js Lead API
+    ↓
+Supabase PostgreSQL
+    ↓
+Local n8n Webhook
+    ↓
+Processing Callback
+    ↓
+Edit Fields
+    ↓
+Resend Email API
+    ↓
+Sent Callback
+    ↓
+Supabase Final Status
+```
+
+**Observed integration evidence:**
+
+| Verification | Observed result |
+|---|---|
+| Lead API submission | HTTP 201 |
+| Automation trigger | Accepted |
+| n8n execution | #9 |
+| Workflow nodes | All five executed successfully |
+| Supabase final status | `sent` |
+| Workflow execution ID | `9` |
+| Provider message ID | Populated |
+| Response timestamp | Populated |
+| Error code | `NULL` |
+| Test email | Received in Gmail |
+
+**Duplicate-submission verification:**
+
+A repeated request using the same `submissionId` returned HTTP 200 with `duplicate: true` and the original lead identifier.
+
+A read-only Supabase query confirmed exactly one record for that submission ID.
+
+**Server-side input-validation verification:**
+
+| Test | HTTP result | Outcome |
+|---|---|---|
+| Invalid email | 400 | Rejected |
+| Empty name | 400 | Rejected |
+| Empty interest | 400 | Rejected |
+| Invalid submission UUID | 400 | Rejected |
+
+**Failure-path evidence:**
+
+An earlier webhook rejection was recorded in Supabase with `response_status = failed` and `error_code = AUTOMATION_TRIGGER_REJECTED`.
+
+**Deployment boundary:**
+
+The public Next.js application is accessible through Vercel, and the expected environment variable names are configured. However, the currently deployed Vercel-to-n8n connection has not been reverified following the local Docker migration.
+
+The local end-to-end integration is verified. Current public end-to-end automation availability remains unverified.
+
+Historical production test records and current local execution evidence are reported separately to avoid overstating deployment reliability.
+
 ## 24. Build, Type and Responsive Verification
 
 The project has been tested using:
@@ -2154,7 +2220,8 @@ The project uses:
 GitHub
 Vercel
 Supabase
-n8n Cloud
+n8n Cloud (original implementation)
+n8n Docker (current local testing environment)
 Resend
 ```
 
@@ -2217,6 +2284,8 @@ The final production smoke test should verify that the deployed version includes
 
 ## 37. Final Implementation Status
 
+The following table distinguishes implemented capabilities, observed local testing, historically documented production testing, and functionality that still requires verification.
+
 | Capability | Status |
 |---|---|
 | XBOT EV branded interface | ✅ Implemented |
@@ -2227,36 +2296,61 @@ The final production smoke test should verify that the deployed version includes
 | Interest capture | ✅ Implemented |
 | Client form states | ✅ Implemented |
 | Accessible field feedback | ✅ Implemented |
-| Server-side Zod validation | ✅ Implemented |
-| PostgreSQL lead persistence | ✅ Implemented |
-| `pending` lifecycle | ✅ Implemented |
-| Authenticated n8n trigger | ✅ Implemented |
-| Production n8n workflow | ✅ Verified |
-| `processing` callback | ✅ Verified |
-| Workflow execution tracking | ✅ Verified |
-| Personalized lead name | ✅ Verified |
-| Personalized lead interest | ✅ Verified |
-| Resend email operation | ✅ Verified |
-| Secure Resend credential | ✅ Verified |
-| `sent` callback | ✅ Verified |
-| Provider message ID tracking | ✅ Verified |
-| Response timestamp | ✅ Verified |
-| Callback authentication | ✅ Verified |
-| Invalid UUID rejection | ✅ Verified |
-| Invalid state rejection | ✅ Verified |
-| Terminal-state protection | ✅ Verified |
-| Trigger unknown-outcome handling | ✅ Implemented |
-| Database submission idempotency | ✅ Implemented |
-| Duplicate API behavior | ✅ Locally verified |
-| Production core E2E flow | ✅ Verified |
-| Actual test email receipt | ✅ Verified |
-| Vercel deployment | ✅ Verified |
-| Production build | ✅ Verified |
-| Lint | ✅ Verified |
-| Latest duplicate hardening deployed | ⏳ Final push/smoke verification required |
+| Server-side Zod validation | ✅ Implemented and locally tested |
+| PostgreSQL lead persistence | ✅ Verified locally |
+| `pending` lifecycle | ✅ Verified locally |
+| Authenticated n8n trigger | ✅ Verified locally |
+| Production n8n workflow | Historically documented; current public availability unverified |
+| Local Docker n8n workflow | ✅ Verified — execution #9 |
+| `processing` callback | ✅ Verified in local integration |
+| Workflow execution tracking | ✅ Verified locally |
+| Personalized lead name | ✅ Verified locally |
+| Personalized lead interest | ✅ Verified locally |
+| Resend email operation | ✅ Verified locally |
+| Secure Resend credential | ✅ Previously documented; current local credential configuration not independently re-inspected |
+| `sent` callback | ✅ Verified locally |
+| Provider message ID tracking | ✅ Verified locally |
+| Response timestamp | ✅ Verified locally |
+| Callback authentication | ✅ Implemented; historical negative-test evidence documented |
+| Invalid UUID rejection | ✅ Verified locally for lead submission |
+| Invalid state rejection | Historically documented |
+| Terminal-state protection | Historically documented |
+| Trigger unknown-outcome handling | ✅ Implemented; specific failure scenario not independently retested |
+| Database submission idempotency | ✅ Verified locally |
+| Duplicate API behavior | ✅ Verified — HTTP 200, `duplicate: true` |
+| Duplicate database record prevention | ✅ Verified — one matching lead |
+| Invalid email rejection | ✅ Verified — HTTP 400 |
+| Missing name rejection | ✅ Verified — HTTP 400 |
+| Missing interest rejection | ✅ Verified — HTTP 400 |
+| Invalid submission ID rejection | ✅ Verified — HTTP 400 |
+| Webhook rejection failure tracking | ✅ Verified — `AUTOMATION_TRIGGER_REJECTED` |
+| Historical production core E2E flow | Documented executions #21, #22 and #23; current availability unverified |
+| Latest local Docker core E2E flow | ✅ Verified — execution #9 |
+| Actual test email receipt | ✅ Verified locally through Gmail |
+| Vercel frontend availability | ✅ Verified |
+| Vercel environment variable names | ✅ Verified present |
+| Current Vercel-to-n8n connectivity | ⏳ Not verified |
+| Production build | ✅ Previously documented as passed |
+| Lint | ✅ Previously documented as passed |
+| Latest duplicate hardening deployed | ⏳ Production smoke test required |
 | Explicit provider-error n8n branch | Not claimed as verified |
 | Exactly-once distributed delivery | Not claimed |
 | Guaranteed inbox delivery | Not claimed |
+
+### Current Verification Summary
+
+XBOT EV is a full-stack lead capture and response automation application with a publicly accessible Vercel frontend, server-side Next.js APIs, Supabase PostgreSQL persistence, and n8n workflow integration.
+
+On November 9, 2026, the local Docker-based n8n integration successfully executed all five workflow nodes, including processing and sent callbacks. Supabase recorded the completed lead lifecycle, and the personalized test email was received in Gmail.
+
+Additional local testing verified duplicate-submission handling, database uniqueness, mandatory input validation, and previously observed webhook rejection tracking.
+
+Earlier production executions are documented separately. The current Vercel-to-n8n integration remains unverified following the move to local Docker.
+
+The project demonstrates hands-on experience with full-stack development, API integration, workflow automation, server-side persistence, validation, and error-aware system design.
+
+It does not claim enterprise-level reliability, guaranteed delivery, or sustained production operation.
+
 
 ## 38. Final Result
 
@@ -2348,6 +2442,20 @@ deployable and reproducible architecture
 The design deliberately avoids unsupported product claims, unnecessary AI, unnecessary infrastructure, and exaggerated reliability claims.
 
 The final implementation demonstrates not only that the automation works, but also why each component exists, how the systems communicate, how privileged operations are protected, how lifecycle truth is maintained, how duplicate requests are handled, how uncertain outcomes are represented, how the production chain was verified, and how another developer can reproduce the complete application.
+
+### Current Deployment and Verification Status
+
+XBOT EV is a full-stack lead automation application developed as an assessment and portfolio project.
+
+Its Next.js application is deployed on Vercel, with Supabase PostgreSQL providing server-side persistence.
+
+The complete five-node n8n automation has been successfully tested in a local Docker environment, including authenticated callbacks, Resend email acceptance, and final database status updates.
+
+Input validation, duplicate-submission protection, and webhook-rejection tracking have also been tested.
+
+Historical production workflow executions are documented separately. Current public end-to-end automation availability remains unverified following the migration to local n8n.
+
+The project demonstrates hands-on full-stack development, API integration, workflow orchestration, persistent storage, and error-aware automation design.
 
 **Live Application:** https://xbot-task-4.vercel.app  
 **Source Repository:** https://github.com/Shoaibstat876/xbot-task-4  

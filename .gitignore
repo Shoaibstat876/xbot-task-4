@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+questions-answers.md
+
+# Local n8n migration files (not for publication)
+/n8n-backup/
+/n8n-docker/
